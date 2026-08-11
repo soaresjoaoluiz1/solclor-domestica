@@ -1,8 +1,9 @@
-# Solclor Piscinas — Landing Page
+# Solclor Doméstica — Landing Page
 
-Landing page do programa **Revendedor Autorizado Solclor** (linha de produtos para piscinas e domésticos).
+Landing page do programa **Revendedor Autorizado Solclor** — linha doméstica (lavanderia, cozinha, banheiro, pisos, perfumação), com opção complementar de linha para piscinas.
 
-**Produção:** https://piscinas.solclor.com.br
+**Produção:** https://produtos.solclor.com.br
+**User cPanel VPS Dros HostGator:** `solclordomestic`
 
 ## Stack
 
@@ -29,8 +30,8 @@ solclor-piscinas/
 ## Deploy
 
 ```bash
-# na VPS Dros HostGator
-cd /home/solclorpiscinas/public_html/
+# na VPS Dros HostGator (162.214.146.220)
+cd /home/solclordomestic/public_html/
 git pull origin main
 ```
 
