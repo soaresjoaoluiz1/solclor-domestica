@@ -1695,6 +1695,24 @@
   }
   .mobile-menu-brand img { height: 40px; width: auto; }
 </style>
+
+<!-- ============= META PIXEL — SOLCLOR ============= -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '223989146770871');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=223989146770871&ev=PageView&noscript=1"/></noscript>
+<!-- ============= FIM META PIXEL ============= -->
+
 </head>
 <body>
 
@@ -2669,11 +2687,13 @@
         return;
       }
       submitBtn.disabled = true;
-      const orig = submitBtn.textContent;
       submitBtn.textContent = 'Enviando...';
 
       let tracking = {};
       try { tracking = JSON.parse(sessionStorage.getItem('solclor_tracking') || '{}'); } catch (_) {}
+
+      // event_id unico pra dedup CAPI vs Browser Pixel no futuro
+      const eventId = 'lead-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
 
       const payload = {
         lp: 'revendedor',
@@ -2687,6 +2707,7 @@
         como_pretende: form.como_pretende.value,
         linha_interesse: form.linha_interesse.value,
         ...tracking,
+        event_id: eventId,
         submit_time: new Date().toISOString(),
         submit_page: window.location.href,
         page_url: window.location.pathname + window.location.search,
@@ -2703,20 +2724,21 @@
             body: JSON.stringify(payload)
           });
         }
+        // Preserva UTMs + passa event_id na URL da obrigado
+        const utmParams = new URLSearchParams();
+        ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','gclid'].forEach(k => {
+          if (tracking[k]) utmParams.set(k, tracking[k]);
+        });
+        utmParams.set('eid', eventId);
+        window.location.href = '/obrigado.html?' + utmParams.toString();
       } catch (err) {
         console.warn('Falha ao enviar pro Apps Script:', err);
+        submitBtn.textContent = 'Erro, tenta de novo';
+        setTimeout(() => {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Enviar cadastro';
+        }, 2500);
       }
-
-      // TODO: substituir por redirect pra página de obrigado quando existir
-      submitBtn.textContent = 'Cadastro enviado!';
-      submitBtn.style.background = '#20A87F';
-      alert('Cadastro enviado! Nossa equipe entrará em contato em até 24h úteis.');
-      form.reset();
-      setTimeout(() => {
-        submitBtn.disabled = false;
-        submitBtn.textContent = orig;
-        submitBtn.style.background = '';
-      }, 3000);
     });
   }
 
