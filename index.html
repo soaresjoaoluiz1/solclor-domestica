@@ -2626,9 +2626,35 @@
     document.querySelectorAll('.reveal, .fade-in').forEach((el) => el.classList.add('in-view'));
   }
 
+  // ============ TRACKING: captura UTMs + clickids na primeira visita ============
+  (function captureTracking() {
+    const KEY = 'solclor_tracking';
+    let existing = {};
+    try { existing = JSON.parse(sessionStorage.getItem(KEY) || '{}'); } catch (_) {}
+    const params = new URLSearchParams(window.location.search);
+    const utmKeys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','gclid','ttclid','msclkid'];
+    let changed = false;
+    utmKeys.forEach(k => {
+      const v = params.get(k);
+      if (v && !existing[k]) { existing[k] = v; changed = true; }
+    });
+    if (!existing.first_visit_time) { existing.first_visit_time = new Date().toISOString(); changed = true; }
+    if (!existing.entry_page)       { existing.entry_page = window.location.pathname + window.location.search; changed = true; }
+    if (!existing.referrer)         { existing.referrer = document.referrer || '(direto)'; changed = true; }
+    if (!existing.user_agent)       { existing.user_agent = navigator.userAgent; changed = true; }
+    if (!existing.screen)           { existing.screen = window.screen.width + 'x' + window.screen.height; changed = true; }
+    if (!existing.language)         { existing.language = navigator.language || ''; changed = true; }
+    if (changed) sessionStorage.setItem(KEY, JSON.stringify(existing));
+  })();
+
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
   // Submit do formulario
   const form = document.getElementById('form-revendedor');
-  const APPS_SCRIPT_URL = ''; // TODO: colocar URL do Apps Script quando publicado
+  const APPS_SCRIPT_URL = ''; // TODO: colar URL do Apps Script quando publicado
   if (form) {
     const submitBtn = form.querySelector('.form-submit');
     form.addEventListener('submit', async (e) => {
@@ -2646,7 +2672,11 @@
       const orig = submitBtn.textContent;
       submitBtn.textContent = 'Enviando...';
 
+      let tracking = {};
+      try { tracking = JSON.parse(sessionStorage.getItem('solclor_tracking') || '{}'); } catch (_) {}
+
       const payload = {
+        lp: 'revendedor',
         nome: form.nome.value.trim(),
         telefone: form.telefone.value.trim(),
         cidade_estado: form.cidade_estado.value.trim(),
@@ -2656,10 +2686,13 @@
         tem_1500: form.tem_1500.value,
         como_pretende: form.como_pretende.value,
         linha_interesse: form.linha_interesse.value,
-        origem: 'LP Solclor Piscinas',
-        url: window.location.href,
-        user_agent: navigator.userAgent,
-        timestamp_iso: new Date().toISOString(),
+        ...tracking,
+        submit_time: new Date().toISOString(),
+        submit_page: window.location.href,
+        page_url: window.location.pathname + window.location.search,
+        fbp: getCookie('_fbp'),
+        fbc: getCookie('_fbc'),
+        origem: 'lp-revendedor-solclor',
       };
 
       try {
