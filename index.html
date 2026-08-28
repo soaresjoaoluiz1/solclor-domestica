@@ -2383,25 +2383,6 @@ fbq('track', 'PageView');
         </div>
 
         <div class="form-field">
-          <select name="perfil" required>
-            <option value="" disabled selected>Qual é o seu perfil?</option>
-            <option>Já revendo produtos</option>
-            <option>Quero começar como revendedor</option>
-            <option>Quero acrescentar os produtos na minha loja</option>
-          </select>
-        </div>
-
-        <div class="form-field">
-          <select name="ja_revende" required>
-            <option value="" disabled selected>Você já trabalha com revenda hoje?</option>
-            <option>Sim</option>
-            <option>Não</option>
-            <option>Tenho loja física</option>
-            <option>Trabalho com vendas online</option>
-          </select>
-        </div>
-
-        <div class="form-field">
           <select name="tem_1500" required>
             <option value="" disabled selected>Você possui inicialmente R$ 1.500 para comprar o kit mínimo de produtos?</option>
             <option>Sim, tenho e quero começar</option>
@@ -2417,16 +2398,6 @@ fbq('track', 'PageView');
             <option>Vendas na minha loja</option>
             <option>Vendas para clientes da minha região</option>
             <option>Quero avaliar a melhor forma de começar</option>
-          </select>
-        </div>
-
-        <div class="form-field">
-          <select name="linha_interesse" required>
-            <option value="" disabled selected>Qual linha desperta mais interesse?</option>
-            <option>Limpeza e higiene</option>
-            <option>Linha domestica completa</option>
-            <option>Linha domestica + piscinas</option>
-            <option>Quero conhecer todas</option>
           </select>
         </div>
 
@@ -2695,17 +2666,21 @@ fbq('track', 'PageView');
       // event_id unico pra dedup CAPI vs Browser Pixel no futuro
       const eventId = 'lead-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
 
+      // Qualificacao: quem marcar "Ainda nao tenho esse valor disponivel" NAO vai pro CRM
+      const tem1500 = form.tem_1500.value;
+      const qualificado = tem1500 !== 'Ainda não tenho esse valor disponível';
+
       const payload = {
         lp: 'revendedor',
         nome: form.nome.value.trim(),
         telefone: form.telefone.value.trim(),
         cidade_estado: form.cidade_estado.value.trim(),
         cpf_cnpj: form.cpf_cnpj.value.trim(),
-        perfil: form.perfil.value,
-        ja_revende: form.ja_revende.value,
-        tem_1500: form.tem_1500.value,
+        tem_1500: tem1500,
         como_pretende: form.como_pretende.value,
-        linha_interesse: form.linha_interesse.value,
+        qualificado,                       // boolean pro Apps Script decidir se manda pro CRM
+        investimento_1500: qualificado ? 'sim' : 'nao',
+        status_lead: qualificado ? 'QUALIFICADO' : 'NAO QUALIFICADO - nao enviado ao CRM',
         ...tracking,
         event_id: eventId,
         submit_time: new Date().toISOString(),
@@ -2724,13 +2699,14 @@ fbq('track', 'PageView');
             body: JSON.stringify(payload)
           });
         }
-        // Preserva UTMs + passa event_id na URL da obrigado
+        // Preserva UTMs + passa event_id na URL da obrigado (ou obrigado-nao se nao qualificado)
         const utmParams = new URLSearchParams();
         ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','gclid'].forEach(k => {
           if (tracking[k]) utmParams.set(k, tracking[k]);
         });
         utmParams.set('eid', eventId);
-        window.location.href = '/obrigado.html?' + utmParams.toString();
+        const dest = qualificado ? '/obrigado.html' : '/obrigado-nao.html';
+        window.location.href = dest + '?' + utmParams.toString();
       } catch (err) {
         console.warn('Falha ao enviar pro Apps Script:', err);
         submitBtn.textContent = 'Erro, tenta de novo';
