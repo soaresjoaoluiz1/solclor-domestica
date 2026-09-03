@@ -13,8 +13,16 @@
 var SHEET_NAME = 'Pagina1' // ou 'Sheet1' se estiver em ingles
 var CRM_WEBHOOK_URL = 'https://drosagencia.com.br/crm/api/webhooks/sheets/solclor'
 
-// Tags oficiais fixas — sempre as 2 mesmas pra revendedores da LP
-var CRM_TAGS_QUALIFICADO = ['Revendedor Linha Domestica', 'Revendedor Piscinas']
+// Tag oficial escolhida pela LP de origem (identificada pela URL do form)
+// - piscinas.solclor.com.br -> "Revendedor Piscinas"
+// - produtos.solclor.com.br (ou qualquer outra) -> "Revendedor Linha Domestica"
+function resolveTagsFromUrl(url) {
+  var u = String(url || '').toLowerCase()
+  if (u.indexOf('piscinas.solclor') >= 0) return ['Revendedor Piscinas']
+  if (u.indexOf('produtos.solclor') >= 0) return ['Revendedor Linha Domestica']
+  // Fallback: sem URL reconhecivel, marca as duas pra nao perder o lead
+  return ['Revendedor Linha Domestica', 'Revendedor Piscinas']
+}
 
 var HEADERS = [
   'timestamp',           // 1
@@ -148,7 +156,7 @@ function doPost(e) {
       cpf_cnpj: data.cpf_cnpj || '',
       source: 'lp-revendedor-solclor',
       source_detail: detailBits.join(' | ').substring(0, 500),
-      tags: CRM_TAGS_QUALIFICADO,
+      tags: resolveTagsFromUrl(data.url || data.page_url || ''),
       notes: notesLines.join('\n'),
       observacoes: notesLines.join('\n'),
       interesse: 'Revendedor autorizado — kit inicial R$ 1.500',
@@ -243,9 +251,10 @@ function initSheet() {
 }
 
 // Testes rapidos
-function testQualificado() {
+function testQualificadoProdutos() {
+  // Simula lead da LP produtos.solclor.com.br -> deve receber tag "Revendedor Linha Domestica"
   var e = { postData: { contents: JSON.stringify({
-    nome: 'TESTE Qualificado',
+    nome: 'TESTE Qualificado Produtos',
     telefone: '48999998888',
     cidade_estado: 'Sao Paulo / SP',
     cpf_cnpj: '12345678909',
@@ -253,7 +262,25 @@ function testQualificado() {
     como_pretende: 'Revenda para amigos, familiares e vizinhos',
     qualificado: true,
     origem: 'lp-revendedor-solclor',
+    url: 'https://produtos.solclor.com.br/?utm_source=facebook',
     utm_source: 'facebook', utm_medium: 'cpc', utm_campaign: 'teste',
+    user_agent: 'Mozilla Test',
+  })}}
+  Logger.log(doPost(e).getContent())
+}
+function testQualificadoPiscinas() {
+  // Simula lead da LP piscinas.solclor.com.br -> deve receber tag "Revendedor Piscinas"
+  var e = { postData: { contents: JSON.stringify({
+    nome: 'TESTE Qualificado Piscinas',
+    telefone: '48999996666',
+    cidade_estado: 'Curitiba / PR',
+    cpf_cnpj: '11122233344',
+    tem_1500: 'Sim, tenho e quero começar',
+    como_pretende: 'Vendas para clientes da minha regiao',
+    qualificado: true,
+    origem: 'lp-piscinas-solclor',
+    url: 'https://piscinas.solclor.com.br/?utm_source=google',
+    utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'piscinas-poa',
     user_agent: 'Mozilla Test',
   })}}
   Logger.log(doPost(e).getContent())
